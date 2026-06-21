@@ -74,7 +74,7 @@ catch(std::exception const &e)
 
 
 
-void go(fs::path const &path)
+void go(fs::path const &path, bool all)
 {
     Map     extensions;
 
@@ -92,6 +92,28 @@ void go(fs::path const &path)
 
     std::ranges::sort(sortable,std::greater<>{},   & decltype(sortable)::value_type::second);
 
+    if(not all)
+    {
+        if(sortable.size() > 10)
+        {
+            auto remainingCount = sortable.size()-10;
+            auto remainingSize  = std::ranges::fold_left(sortable | std::views::drop(10) | std::views::transform([](auto const &e){return e.second.size;}), 
+                                                         0ll, 
+                                                         std::plus<>{});
+
+            auto remainingFiles = std::ranges::fold_left(sortable | std::views::drop(10) | std::views::transform([](auto const &e){return e.second.count;}), 
+                                                         0, 
+                                                         std::plus<>{});
+
+
+            sortable.resize(10);
+
+            sortable.emplace_back(std::format("Remaining {}...",remainingCount), Stats{remainingSize, remainingFiles});
+        }
+    }
+
+
+
     for(auto const &[extension, stats] : sortable)
     {
         std::print("{:<40} : {:>20} in {} files\n",extension,pretty(stats.size),stats.count);
@@ -106,11 +128,11 @@ try
 
     if(args.empty())
     {
-        go(fs::current_path());
+        go(fs::current_path(), args.contains("-all"));
     }
     else
     {
-        go(args[0]);
+        go(args[0], args.contains("-all"));
     }
 
 }
